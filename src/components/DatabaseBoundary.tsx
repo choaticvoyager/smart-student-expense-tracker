@@ -1,3 +1,4 @@
+import React from 'react';
 import { Component, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 

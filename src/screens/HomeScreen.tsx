@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { StyleSheet, Text, View } from 'react-native';
