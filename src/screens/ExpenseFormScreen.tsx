@@ -1,8 +1,11 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+
+import React, { useEffect, useLayoutEffect, useState } from 'react';
+
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSQLiteContext } from 'expo-sqlite';
+
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,7 +25,11 @@ import { listCategories } from '../db/categories';
 import { createExpense, getExpense, updateExpense } from '../db/expenses';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
-import { PAYMENT_METHODS, type Category, type PaymentMethod } from '../types/models';
+import {
+  PAYMENT_METHODS,
+  type Category,
+  type PaymentMethod,
+} from '../types/models';
 import { isValidISODate, todayISO } from '../utils/dates';
 import { parseAmount } from '../utils/money';
 
@@ -46,9 +53,13 @@ const EMPTY_DRAFT: Draft = {
 
 export function ExpenseFormScreen() {
   const db = useSQLiteContext();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   const route = useRoute<RouteProp<RootStackParamList, 'ExpenseForm'>>();
   const expenseId = route.params?.expenseId;
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [errors, setErrors] = useState<string[]>([]);
@@ -57,11 +68,14 @@ export function ExpenseFormScreen() {
   const [saving, setSaving] = useState(false);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: expenseId ? 'Edit expense' : 'New expense' });
+    navigation.setOptions({
+      title: expenseId ? 'Edit expense' : 'New expense',
+    });
   }, [navigation, expenseId]);
 
   useEffect(() => {
     let active = true;
+
     listCategories(db)
       .then((rows) => {
         if (active) {
@@ -73,6 +87,7 @@ export function ExpenseFormScreen() {
           setErrors(['Could not load categories from the local database.']);
         }
       });
+
     return () => {
       active = false;
     };
@@ -84,15 +99,18 @@ export function ExpenseFormScreen() {
     }
 
     let active = true;
+
     getExpense(db, expenseId)
       .then((expense) => {
         if (!active) {
           return;
         }
+
         if (!expense) {
           setMissing(true);
           return;
         }
+
         setDraft({
           title: expense.title,
           amount: expense.amount.toFixed(2),
@@ -119,11 +137,15 @@ export function ExpenseFormScreen() {
   }, [db, expenseId]);
 
   function updateDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+    }));
   }
 
   function validate(): string[] {
     const nextErrors: string[] = [];
+
     if (!draft.title.trim()) {
       nextErrors.push('Enter a title.');
     } else if (draft.title.trim().length > 80) {
@@ -131,7 +153,9 @@ export function ExpenseFormScreen() {
     }
 
     if (parseAmount(draft.amount) === null) {
-      nextErrors.push('Enter an amount greater than zero, up to 999,999.99.');
+      nextErrors.push(
+        'Enter an amount greater than zero, up to 999,999.99.',
+      );
     }
 
     if (!draft.categoryId) {
@@ -155,12 +179,19 @@ export function ExpenseFormScreen() {
 
   async function save() {
     const nextErrors = validate();
+
     setErrors(nextErrors);
-    if (nextErrors.length > 0 || !draft.categoryId || !draft.paymentMethod) {
+
+    if (
+      nextErrors.length > 0 ||
+      !draft.categoryId ||
+      !draft.paymentMethod
+    ) {
       return;
     }
 
     const amount = parseAmount(draft.amount);
+
     if (amount === null) {
       return;
     }
@@ -175,27 +206,43 @@ export function ExpenseFormScreen() {
     };
 
     setSaving(true);
+
     try {
       if (expenseId) {
         await updateExpense(db, expenseId, input);
       } else {
         await createExpense(db, input);
       }
+
       navigation.goBack();
     } catch (saveError: unknown) {
-      setErrors([saveError instanceof Error ? saveError.message : 'Could not save this expense.']);
+      setErrors([
+        saveError instanceof Error
+          ? saveError.message
+          : 'Could not save this expense.',
+      ]);
+
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <ActivityIndicator color={colors.brand} style={styles.loader} />;
+    return (
+      <ActivityIndicator
+        size="large"
+        color={colors.brand}
+        style={styles.loader}
+      />
+    );
   }
 
   if (missing) {
     return (
       <View style={styles.content}>
-        <EmptyState title="Expense not found" message="This record is no longer in the local database." />
+        <EmptyState
+          title="Expense not found"
+          message="This record is no longer in the local database."
+        />
       </View>
     );
   }
@@ -203,84 +250,154 @@ export function ExpenseFormScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.intro}>
+          <Text style={styles.heading}>
+            {expenseId ? 'Update your expense' : 'Record a new expense'}
+          </Text>
+
+          <Text style={styles.description}>
+            Enter the details below to keep your spending records up to date.
+          </Text>
+        </View>
+
         {errors.length > 0 ? (
           <View style={styles.errorBox}>
+            <Text style={styles.errorHeading}>
+              Please check the following:
+            </Text>
+
             {errors.map((error) => (
               <Text key={error} style={styles.error}>
-                {error}
+                • {error}
               </Text>
             ))}
           </View>
         ) : null}
 
-        <TextField
-          label="Title"
-          value={draft.title}
-          onChangeText={(value) => updateDraft('title', value)}
-          placeholder="Campus canteen lunch"
-          maxLength={80}
-        />
-        <TextField
-          label="Amount (Rs.)"
-          value={draft.amount}
-          onChangeText={(value) => updateDraft('amount', value)}
-          placeholder="450.00"
-          keyboardType="decimal-pad"
-        />
+        {/* Basic expense details */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Expense details</Text>
 
-        <View style={styles.group}>
-          <Text style={styles.groupLabel}>Category</Text>
-          <View style={styles.wrapChips}>
-            {categories.map((category) => (
-              <Chip
-                key={category.id}
-                label={category.name}
-                color={category.color}
-                selected={draft.categoryId === category.id}
-                onPress={() => updateDraft('categoryId', category.id)}
-              />
-            ))}
+          <TextField
+            label="Title"
+            value={draft.title}
+            onChangeText={(value) => updateDraft('title', value)}
+            placeholder="Campus canteen lunch"
+            maxLength={80}
+          />
+
+          <View style={styles.counterRow}>
+            <Text style={styles.counter}>
+              {draft.title.length}/80 characters
+            </Text>
+          </View>
+
+          <TextField
+            label="Amount (Rs.)"
+            value={draft.amount}
+            onChangeText={(value) => updateDraft('amount', value)}
+            placeholder="450.00"
+            keyboardType="decimal-pad"
+          />
+
+          <View style={styles.group}>
+            <Text style={styles.groupLabel}>Category</Text>
+
+            <Text style={styles.helper}>
+              Select the category that best describes this expense.
+            </Text>
+
+            {categories.length === 0 ? (
+              <Text style={styles.helper}>
+                No categories are available. Check your local database.
+              </Text>
+            ) : (
+              <View style={styles.wrapChips}>
+                {categories.map((category) => (
+                  <Chip
+                    key={category.id}
+                    label={category.name}
+                    color={category.color}
+                    selected={draft.categoryId === category.id}
+                    onPress={() =>
+                      updateDraft('categoryId', category.id)
+                    }
+                  />
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
-        <TextField
-          label="Date"
-          value={draft.spentOn}
-          onChangeText={(value) => updateDraft('spentOn', value)}
-          placeholder="YYYY-MM-DD"
-          autoCapitalize="none"
-          hint="Use the format YYYY-MM-DD."
-        />
-        <Pressable accessibilityRole="button" onPress={() => updateDraft('spentOn', todayISO())}>
-          <Text style={styles.today}>Use today</Text>
-        </Pressable>
+        {/* Date and payment details */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Date and payment</Text>
 
-        <View style={styles.group}>
-          <Text style={styles.groupLabel}>Payment method</Text>
-          <View style={styles.wrapChips}>
-            {PAYMENT_METHODS.map((method) => (
-              <Chip
-                key={method}
-                label={method}
-                selected={draft.paymentMethod === method}
-                onPress={() => updateDraft('paymentMethod', method)}
-              />
-            ))}
+          <TextField
+            label="Date"
+            value={draft.spentOn}
+            onChangeText={(value) => updateDraft('spentOn', value)}
+            placeholder="YYYY-MM-DD"
+            autoCapitalize="none"
+            hint="Enter the date using YYYY-MM-DD format."
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Set expense date to today"
+            onPress={() => updateDraft('spentOn', todayISO())}
+            hitSlop={8}
+          >
+            <Text style={styles.today}>Use today's date</Text>
+          </Pressable>
+
+          <View style={styles.group}>
+            <Text style={styles.groupLabel}>Payment method</Text>
+
+            <Text style={styles.helper}>
+              How did you pay?
+            </Text>
+
+            <View style={styles.wrapChips}>
+              {PAYMENT_METHODS.map((method) => (
+                <Chip
+                  key={method}
+                  label={method}
+                  selected={draft.paymentMethod === method}
+                  onPress={() =>
+                    updateDraft('paymentMethod', method)
+                  }
+                />
+              ))}
+            </View>
           </View>
         </View>
 
-        <TextField
-          label="Note"
-          value={draft.note}
-          onChangeText={(value) => updateDraft('note', value)}
-          placeholder="Optional detail"
-          multiline
-          maxLength={240}
-          style={styles.note}
-        />
+        {/* Optional note */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Additional information</Text>
+
+          <TextField
+            label="Note (optional)"
+            value={draft.note}
+            onChangeText={(value) => updateDraft('note', value)}
+            placeholder="Add any extra details..."
+            multiline
+            maxLength={240}
+            style={styles.note}
+          />
+
+          <Text style={styles.counter}>
+            {draft.note.length}/240 characters
+          </Text>
+        </View>
 
         <PrimaryButton
           label={expenseId ? 'Save changes' : 'Save expense'}
@@ -297,44 +414,86 @@ export function ExpenseFormScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   loader: {
     marginTop: 32,
   },
   content: {
-    gap: 16,
+    flexGrow: 1,
+    gap: 22,
     padding: 20,
-    paddingBottom: 36,
+    paddingBottom: 40,
+  },
+  intro: {
+    gap: 6,
+  },
+  heading: {
+    color: colors.ink,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  description: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 21,
   },
   errorBox: {
     backgroundColor: colors.dangerSurface,
     borderRadius: 14,
-    gap: 4,
-    padding: 12,
+    gap: 6,
+    padding: 14,
+  },
+  errorHeading: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '800',
   },
   error: {
     color: colors.danger,
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 20,
   },
+  formSection: {
+    gap: 14,
+  },
+  sectionTitle: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: '800',
+  },
   group: {
-    gap: 8,
+    gap: 9,
   },
   groupLabel: {
     color: colors.ink,
     fontSize: 14,
     fontWeight: '700',
   },
+  helper: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
   wrapChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
+  counterRow: {
+    alignItems: 'flex-end',
+    marginTop: -10,
+  },
+  counter: {
+    color: colors.muted,
+    fontSize: 11,
+    textAlign: 'right',
+  },
   today: {
     color: colors.brand,
     fontSize: 14,
     fontWeight: '700',
-    marginTop: -8,
+    marginTop: -6,
   },
   note: {
     minHeight: 96,

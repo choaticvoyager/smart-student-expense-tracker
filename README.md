@@ -1,123 +1,190 @@
 # Smart Student Expense Tracker
 
-An offline React Native app for recording everyday student spending. Canteen meals, bus fare, books, rent, and smaller costs stay in a SQLite database on the device. The app does not call a public API or an online database.
+An offline React Native application designed to help students manage their everyday expenses. Record spending on canteen meals, transportation, books, rent, and other daily needs.
+
+The application uses a local SQLite database to store expense records directly on the device. It does not depend on public APIs or online databases for its core functionality.
 
 ## Overview
 
-The first launch creates a local database and fills it with a sample student dataset. After that, the app reads and updates only that database. You can search expenses, filter them, open a full record, and add, edit, or delete expenses. Totals on the overview and category screens are calculated from the stored rows, so the figures change as the data changes.
+On the first launch, the application initializes a local SQLite database and inserts a sample student expense dataset.
 
-Amounts are shown in Sri Lankan rupees (Rs.).
+Users can add, edit, delete, search, and filter expense records. The application also calculates spending summaries dynamically using the data stored in the local database.
+
+All monetary values are displayed in Sri Lankan Rupees (Rs.).
 
 ## Features
 
-- Five screens: Overview, Expenses, Expense details, New/Edit expense, and Categories
-- Bottom tabs for the main sections and a stack for details and the form
-- Local SQLite database with categories and expenses
-- Sample dataset created automatically the first time the database is opened
-- Search by title, note, or category
-- Filters for time period, category, and payment method
-- Expense details with date, payment method, and note
-- Add, edit, and delete expenses, with the lists refreshing when you return
-- Monthly total, average, category breakdown, and recent expenses
-- Works without an internet connection after the app bundle is loaded
+- Six screens: Home, Tracker, Expenses, Expense Details, Expense Form, and Categories.
+- Bottom tab navigation for the main sections and stack navigation for expense details and forms.
+- Local SQLite database for storing categories and expenses.
+- Sample categories and expenses inserted automatically when the database is first initialized.
+- Search expenses by title, note, or category.
+- Filter expenses by time period, category, and payment method.
+- View individual expense details, including date, payment method, and note.
+- Add, edit, and delete expense records.
+- Monthly spending total and average expense calculations.
+- Category-wise spending breakdown with percentages and visual progress bars.
+- Recent expense records displayed on the Tracker screen.
+- Data remains stored locally on the device.
+- Core expense tracking features work without an internet connection after the application bundle has loaded.
 
-## Project structure
+## Project Structure
 
 ```text
-App.tsx                         App entry, safe area, and database provider
-src/db/initialize.ts            Tables, indexes, and the sample dataset
-src/db/categories.ts            Category queries
-src/db/expenses.ts              Expense queries and the overview summary
-src/navigation/RootNavigator.tsx  Tabs and stack navigation
-src/screens/                    One file for each screen
-src/components/                 Shared buttons, fields, rows, and chips
-src/types/models.ts             Shared data types
-src/utils/                      Date and currency helpers
+App.tsx                              App entry point and database provider
+src/
+  db/
+    initialize.ts                    Database initialization, tables, and sample data
+    categories.ts                    Category queries and summaries
+    expenses.ts                      Expense queries and dashboard summary
+  navigation/
+    RootNavigator.tsx                Bottom tabs and stack navigation
+  screens/
+    HomeScreen.tsx                   Home screen
+    TrackerScreen.tsx                Monthly spending overview
+    ExpensesScreen.tsx               Expense list, search, and filters
+    ExpenseDetailScreen.tsx          Individual expense details
+    ExpenseFormScreen.tsx            Add and edit expenses
+    CategoriesScreen.tsx             Category-wise spending summary
+  components/                        Shared buttons, fields, rows, and chips
+  types/
+    models.ts                         Shared data types
+  utils/                              Date and currency helpers
 ```
 
 ## Requirements
 
 - Node.js 20 or newer
-- npm, which is installed with Node.js
-- One of these ways to open the app:
-  - Expo Go on an Android or iPhone, with the phone and computer on the same Wi-Fi network
-  - An Android emulator
-  - A desktop browser, for a quick preview
+- npm
+- Expo Go on an Android or iPhone, or an Android emulator
 
-iOS Simulator requires a Mac. On Windows, use Expo Go, an Android emulator, or the browser preview.
+**Recommended development environment:** Expo Go on an Android device or an Android emulator.
 
-## Step-by-step setup
+An iOS Simulator requires macOS and Xcode.
 
-1. Install Node.js from [https://nodejs.org](https://nodejs.org) if it is not already installed. Open a terminal and check the version:
+## Step-by-Step Setup
 
-   ```bash
-   node -v
-   npm -v
-   ```
+### 1. Install Node.js
 
-2. Open a terminal in the project folder:
+Download and install Node.js from [https://nodejs.org](https://nodejs.org) if it is not already installed.
 
-   ```bash
-   cd 'your\file\path'
-   ```
+Check the installed versions using:
 
-3. Install the project packages:
+```bash
+node -v
+npm -v
+```
 
-   ```bash
-   npm install
-   ```
+### 2. Open the Project Folder
 
-4. Start the Expo development server:
+Open a terminal inside the project directory.
 
-   ```bash
-   npx expo start
-   ```
+Alternatively, navigate to the project folder:
 
-5. Open the app with one of these options:
-   - **Phone:** install Expo Go from the Play Store or App Store. In the terminal, scan the QR code. Android can scan it from inside Expo Go. iPhone can scan it with the Camera app.
-   - **Android emulator:** press `a` in the Expo terminal. Android Studio and a virtual device must already be installed.
-   - **Browser preview:** press `w` in the Expo terminal.
+```bash
+cd "your/project/path"
+```
 
-6. Stop the server with `Ctrl+C` when you are finished.
+### 3. Install Dependencies
 
-The sample expenses appear on the first launch. They are saved on the device, so later launches keep your edits.
+Run:
 
-## How to use the app
+```bash
+npm install
+```
 
-1. **Overview** shows this month’s total, the average expense, spending by category, and the five most recent expenses.
-2. Tap **Add expense** to record a new item. Enter a title, amount, category, date (`YYYY-MM-DD`), payment method, and an optional note.
-3. **Expenses** lists every saved record. Use the search box and the chips to narrow the list by period, category, or payment method.
-4. Tap an expense to open **Expense details**. From there you can edit or delete it.
-5. **Categories** shows the total stored against each category. Tap a category to open Expenses already filtered to that category.
+### 4. Start the Expo Development Server
 
-## Local data
+Run:
 
-The database file is `student-expenses.db`.
+```bash
+npx expo start
+```
 
-| Table | What it stores |
-| --- | --- |
-| `categories` | Id, name, and colour |
-| `expenses` | Title, amount, category, date, payment method, note, and the time it was recorded |
+### 5. Open the Application
 
-The sample set has 8 categories and 18 expenses spread across recent days, this month, and older dates, so the period filters have something to show. New and edited records are written with parameterized SQL statements. The sample data is inserted only when the database is first created.
+Choose one of the following options:
 
-To see the original sample data again, remove the app’s stored data:
+- **Android phone:** Install Expo Go from the Google Play Store. Scan the QR code displayed in the terminal using Expo Go.
+- **iPhone:** Install Expo Go from the App Store and scan the QR code using the Camera app.
+- **Android emulator:** Press `a` in the Expo terminal. Android Studio and a configured virtual device must be installed.
 
-- Expo Go: clear the app’s storage, or reinstall Expo Go’s data for this project
-- Browser preview: clear the site data for the local Expo page, then reload
+For a physical device, the phone and computer should normally be connected to the same Wi-Fi network.
 
-## Offline behaviour
+### 6. Stop the Development Server
 
-Expense records are never sent to a server. Search, filters, totals, and edits all use the database on the device.
+Press `Ctrl + C` in the terminal.
 
-During development, Expo Go still needs to reach your computer once so it can download the JavaScript bundle. After the app is open, tracking works with the network turned off.
+The sample expenses are inserted when the local database is first initialized. Later launches retain saved expense records and user changes.
 
-## Scripts
+## How to Use the Application
 
-| Command | What it does |
-| --- | --- |
-| `npm install` | Installs dependencies |
-| `npx expo start` | Starts the development server |
-| `npm run android` | Opens the Android build target |
-| `npm run web` | Opens the browser preview |
-| `npx tsc --noEmit` | Checks TypeScript without producing a build |
+1. **Home:** Introduces the application and provides access to the expense tracking features.
+2. **Tracker:** Displays the current month's total spending, average expense, category breakdown, and recent expenses.
+3. **Expenses:** Displays saved expense records. Use the search field and filters to find specific expenses.
+4. **Expense Details:** Select an expense to view its complete information. You can edit or delete the selected record.
+5. **Expense Form:** Add a new expense or edit an existing one by entering its title, amount, category, date, payment method, and optional note.
+6. **Categories:** Displays spending totals for each category, including percentage breakdowns and progress bars. Select a category to view its related expenses.
+
+## Local Data Management
+
+The application uses SQLite to store data locally on the device.
+
+Database initialization, table creation, and sample data insertion are handled in:
+
+```text
+src/db/initialize.ts
+```
+
+The database contains the following main tables:
+
+| Table | Stored Information |
+|---|---|
+| `categories` | Category ID, name, and colour |
+| `expenses` | Expense title, amount, category, date, payment method, note, and recorded time |
+
+The initial sample dataset contains:
+
+- 8 expense categories
+- 18 sample expenses
+- Expenses distributed across recent days, the current month, and older dates
+
+This dataset allows users to explore the search and period-filtering features.
+
+New and edited expense records are stored using parameterized SQL statements. Sample data is inserted only when the database is first initialized.
+
+### Resetting the Sample Data
+
+To see the original sample dataset again, clear the application's stored data or reinstall the application.
+
+- **Expo Go:** Clear the relevant application data or reset the project data.
+- **Android emulator:** Clear the application's stored data or reinstall the app.
+
+Clearing application data removes locally stored expense records and user changes.
+
+## Offline Behaviour
+
+The application stores expense records in a local SQLite database.
+
+The following features operate using locally stored data:
+
+- Adding, editing, and deleting expenses
+- Searching and filtering expenses
+- Viewing expense details
+- Calculating monthly totals and averages
+- Displaying category-wise spending summaries
+
+Expense records are not sent to an external server.
+
+During development, Expo Go initially needs to connect to the computer to download the application bundle. Once the application has loaded, its core expense tracking functionality can operate without an internet connection.
+
+## Available Scripts
+
+| Command | Description |
+|---|---|
+| `npm install` | Installs project dependencies |
+| `npx expo start` | Starts the Expo development server |
+| `npm run android` | Starts the Android build target |
+| `npm run web` | Starts the web preview, if configured |
+| `npx tsc --noEmit` | Checks TypeScript without generating build files |
+

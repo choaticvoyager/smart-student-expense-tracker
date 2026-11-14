@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors } from '../theme/colors';

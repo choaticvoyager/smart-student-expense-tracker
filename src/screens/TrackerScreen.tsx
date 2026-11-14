@@ -1,11 +1,12 @@
-import React from 'react';
 
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSQLiteContext } from 'expo-sqlite';
+
 import {
   ActivityIndicator,
   Pressable,
@@ -76,35 +77,64 @@ export function TrackerScreen() {
       : 0;
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <ScreenHeader
         eyebrow={formatMonthLabel()}
         title="Student spending"
-        subtitle="Canteen, transport, books, rent, and the smaller costs in between."
+        subtitle="Keep track of your daily expenses and understand your spending habits."
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {!dashboard && !error ? (
-        <ActivityIndicator color={colors.brand} />
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.brand} />
+          <Text style={styles.loadingText}>Loading your expenses...</Text>
+        </View>
       ) : null}
 
       {dashboard ? (
         <>
+          {/* Monthly summary */}
           <View style={styles.summary}>
-            <Text style={styles.summaryLabel}>Spent this month</Text>
+            <Text style={styles.summaryLabel}>TOTAL SPENDING THIS MONTH</Text>
 
             <Text style={styles.summaryAmount}>
               {formatMoney(dashboard.monthTotal)}
             </Text>
 
-            <Text style={styles.summaryMeta}>
-              {dashboard.monthCount}{' '}
-              {dashboard.monthCount === 1 ? 'expense' : 'expenses'}
-              {dashboard.monthCount > 0
-                ? ` · ${formatMoney(average)} average`
-                : ''}
+            <View style={styles.summaryDivider} />
+
+            <Text style={styles.summaryNote}>
+              {dashboard.monthCount === 0
+                ? 'No expenses recorded this month yet.'
+                : `You have recorded ${dashboard.monthCount} ${
+                    dashboard.monthCount === 1 ? 'expense' : 'expenses'
+                  } this month.`}
             </Text>
+          </View>
+
+          {/* Monthly statistics */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Expenses</Text>
+              <Text style={styles.statValue}>
+                {dashboard.monthCount}
+              </Text>
+              <Text style={styles.statDescription}>This month</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Average</Text>
+              <Text style={styles.statValue}>
+                {formatMoney(average)}
+              </Text>
+              <Text style={styles.statDescription}>Per expense</Text>
+            </View>
           </View>
 
           <PrimaryButton
@@ -112,8 +142,12 @@ export function TrackerScreen() {
             onPress={() => navigation.navigate('ExpenseForm')}
           />
 
+          {/* Category breakdown */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>By category</Text>
+            <View style={styles.sectionHeading}>
+              <Text style={styles.sectionTitle}>Spending by category</Text>
+              <Text style={styles.sectionCaption}>This month</Text>
+            </View>
 
             {dashboard.categories.every(
               (category) => category.total === 0,
@@ -123,55 +157,68 @@ export function TrackerScreen() {
                 message="Expenses you add this month will appear here."
               />
             ) : (
-              dashboard.categories
-                .filter((category) => category.total > 0)
-                .map((category) => (
-                  <View key={category.id} style={styles.barRow}>
-                    <View style={styles.barLabel}>
-                      <Text style={styles.barName}>
-                        {category.name}
-                      </Text>
+              <View style={styles.categoryList}>
+                {dashboard.categories
+                  .filter((category) => category.total > 0)
+                  .map((category) => (
+                    <View key={category.id} style={styles.categoryCard}>
+                      <View style={styles.barLabel}>
+                        <View style={styles.categoryNameContainer}>
+                          <View
+                            style={[
+                              styles.categoryDot,
+                              { backgroundColor: category.color },
+                            ]}
+                          />
+                          <Text style={styles.barName}>
+                            {category.name}
+                          </Text>
+                        </View>
 
-                      <Text style={styles.barAmount}>
-                        {formatMoney(category.total)}
-                      </Text>
-                    </View>
+                        <Text style={styles.barAmount}>
+                          {formatMoney(category.total)}
+                        </Text>
+                      </View>
 
-                    <View style={styles.track}>
-                      <View
-                        style={[
-                          styles.fill,
-                          {
-                            backgroundColor: category.color,
-                            width: `${Math.max(
-                              8,
-                              (category.total / maxTotal) * 100,
-                            )}%`,
-                          },
-                        ]}
-                      />
+                      <View style={styles.track}>
+                        <View
+                          style={[
+                            styles.fill,
+                            {
+                              backgroundColor: category.color,
+                              width: `${Math.max(
+                                8,
+                                (category.total / maxTotal) * 100,
+                              )}%`,
+                            },
+                          ]}
+                        />
+                      </View>
                     </View>
-                  </View>
-                ))
+                  ))}
+              </View>
             )}
           </View>
 
+          {/* Recent expenses */}
           <View style={styles.section}>
             <View style={styles.sectionHeading}>
-              <Text style={styles.sectionTitle}>Recent</Text>
+              <Text style={styles.sectionTitle}>Recent expenses</Text>
 
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="View all expenses"
                 onPress={() => navigation.navigate('Expenses')}
+                hitSlop={8}
               >
-                <Text style={styles.link}>View all</Text>
+                <Text style={styles.link}>View all →</Text>
               </Pressable>
             </View>
 
             {dashboard.recent.length === 0 ? (
               <EmptyState
                 title="Nothing recorded"
-                message="Add an expense to start the local record."
+                message="Add an expense to start your local record."
               />
             ) : (
               <View style={styles.list}>
@@ -196,37 +243,88 @@ export function TrackerScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   content: {
-    gap: 18,
+    gap: 20,
     padding: 20,
-    paddingBottom: 32,
+    paddingBottom: 36,
   },
   error: {
     color: colors.danger,
     fontSize: 14,
+    backgroundColor: '#FCE8E6',
+    padding: 12,
+    borderRadius: 10,
+  },
+  loading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  loadingText: {
+    color: colors.muted,
+    fontSize: 14,
   },
   summary: {
     backgroundColor: colors.brandDark,
-    borderRadius: 20,
-    gap: 6,
-    padding: 20,
+    borderRadius: 22,
+    padding: 22,
+    gap: 12,
   },
   summaryLabel: {
     color: '#D5E4DE',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   summaryAmount: {
     color: colors.onBrand,
-    fontSize: 32,
-    fontWeight: '700',
+    fontSize: 34,
+    fontWeight: '800',
   },
-  summaryMeta: {
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#FFFFFF35',
+    marginVertical: 2,
+  },
+  summaryNote: {
     color: '#D5E4DE',
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8E5DC',
+    padding: 16,
+    gap: 6,
+  },
+  statLabel: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  statValue: {
+    color: colors.ink,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  statDescription: {
+    color: colors.muted,
+    fontSize: 12,
   },
   section: {
-    gap: 12,
+    gap: 14,
   },
   sectionHeading: {
     alignItems: 'center',
@@ -236,24 +334,44 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.ink,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  link: {
-    color: colors.brand,
-    fontSize: 14,
-    fontWeight: '700',
+  sectionCaption: {
+    color: colors.muted,
+    fontSize: 12,
   },
-  barRow: {
-    gap: 6,
+  categoryList: {
+    gap: 10,
+  },
+  categoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E8E5DC',
+    padding: 14,
+    gap: 12,
   },
   barLabel: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    flex: 1,
+  },
+  categoryDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   barName: {
     color: colors.ink,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   barAmount: {
     color: colors.muted,
@@ -263,12 +381,17 @@ const styles = StyleSheet.create({
   track: {
     backgroundColor: '#E7E1D6',
     borderRadius: 999,
-    height: 8,
+    height: 9,
     overflow: 'hidden',
   },
   fill: {
     borderRadius: 999,
-    height: 8,
+    height: 9,
+  },
+  link: {
+    color: colors.brand,
+    fontSize: 14,
+    fontWeight: '700',
   },
   list: {
     gap: 10,

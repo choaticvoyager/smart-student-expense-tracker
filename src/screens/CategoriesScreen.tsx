@@ -1,10 +1,18 @@
-import { useCallback, useState } from 'react';
+
+import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSQLiteContext } from 'expo-sqlite';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -22,6 +30,7 @@ type CategoriesNavigation = CompositeNavigationProp<
 export function CategoriesScreen() {
   const db = useSQLiteContext();
   const navigation = useNavigation<CategoriesNavigation>();
+
   const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,7 +38,9 @@ export function CategoriesScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
+
       setLoading(true);
+
       listCategorySummaries(db)
         .then((rows) => {
           if (active) {
@@ -39,7 +50,11 @@ export function CategoriesScreen() {
         })
         .catch((loadError: unknown) => {
           if (active) {
-            setError(loadError instanceof Error ? loadError.message : 'Could not load categories.');
+            setError(
+              loadError instanceof Error
+                ? loadError.message
+                : 'Could not load categories.',
+            );
           }
         })
         .finally(() => {
@@ -47,50 +62,177 @@ export function CategoriesScreen() {
             setLoading(false);
           }
         });
+
       return () => {
         active = false;
       };
     }, [db]),
   );
 
-  const total = categories.reduce((sum, category) => sum + category.total, 0);
+  const total = categories.reduce(
+    (sum, category) => sum + category.total,
+    0,
+  );
+
+  const totalExpenses = categories.reduce(
+    (sum, category) => sum + category.count,
+    0,
+  );
+
+  const getPercentage = (amount: number) => {
+    if (total <= 0) return 0;
+    return (amount / total) * 100;
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.content}
+    >
       <ScreenHeader
         title="Categories"
-        subtitle="Every category is stored on this device. Open one to see its expenses."
+        subtitle="Understand where your money goes. Select a category to explore its expenses."
       />
 
-      <View style={styles.totalCard}>
-        <Text style={styles.totalLabel}>All recorded spending</Text>
-        <Text style={styles.totalAmount}>{formatMoney(total)}</Text>
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryLabel}>Total spending</Text>
+
+        <Text style={styles.totalAmount}>
+          {formatMoney(total)}
+        </Text>
+
+        <View style={styles.summaryDivider} />
+
+        <View style={styles.summaryStats}>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>
+              {categories.length}
+            </Text>
+            <Text style={styles.statLabel}>
+              Categories
+            </Text>
+          </View>
+
+          <View style={styles.statSeparator} />
+
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>
+              {totalExpenses}
+            </Text>
+            <Text style={styles.statLabel}>
+              Expenses
+            </Text>
+          </View>
+        </View>
       </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {loading && categories.length === 0 ? <ActivityIndicator color={colors.brand} /> : null}
-      {!loading && categories.length === 0 ? (
-        <EmptyState title="No categories" message="The local database did not return any categories." />
+      <View style={styles.sectionHeader}>
+        <View>
+          <Text style={styles.sectionTitle}>
+            Spending breakdown
+          </Text>
+          <Text style={styles.sectionSubtitle}>
+            Tap a category to view its expenses
+          </Text>
+        </View>
+      </View>
+
+      {error ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorTitle}>
+            Unable to load categories
+          </Text>
+          <Text style={styles.error}>
+            {error}
+          </Text>
+        </View>
+      ) : null}
+
+      {loading && categories.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={colors.brand} size="large" />
+          <Text style={styles.loadingText}>
+            Loading categories...
+          </Text>
+        </View>
+      ) : null}
+
+      {!loading && !error && categories.length === 0 ? (
+        <EmptyState
+          title="No categories found"
+          message="Your categories will appear here when they are available in the local database."
+        />
       ) : null}
 
       <View style={styles.list}>
-        {categories.map((category) => (
-          <Pressable
-            key={category.id}
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('Expenses', { categoryId: category.id })}
-            style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-          >
-            <View style={[styles.stripe, { backgroundColor: category.color }]} />
-            <View style={styles.body}>
-              <Text style={styles.name}>{category.name}</Text>
-              <Text style={styles.meta}>
-                {category.count} {category.count === 1 ? 'expense' : 'expenses'}
+        {categories.map((category) => {
+          const percentage = getPercentage(category.total);
+
+          return (
+            <Pressable
+              key={category.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${category.name}, ${formatMoney(category.total)}, ${category.count} expenses. View expenses.`}
+              onPress={() =>
+                navigation.navigate('Expenses', {
+                  categoryId: category.id,
+                })
+              }
+              style={({ pressed }) => [
+                styles.categoryCard,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={styles.categoryHeader}>
+                <View style={styles.categoryInfo}>
+                  <View
+                    style={[
+                      styles.colorDot,
+                      { backgroundColor: category.color },
+                    ]}
+                  />
+
+                  <View style={styles.categoryText}>
+                    <Text style={styles.categoryName}>
+                      {category.name}
+                    </Text>
+
+                    <Text style={styles.categoryMeta}>
+                      {category.count}{' '}
+                      {category.count === 1 ? 'expense' : 'expenses'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.amountContainer}>
+                  <Text style={styles.categoryAmount}>
+                    {formatMoney(category.total)}
+                  </Text>
+
+                  <Text style={styles.percentage}>
+                    {percentage.toFixed(1)}%
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.progressBackground}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${Math.min(100, percentage)}%`,
+                      backgroundColor: category.color,
+                    },
+                  ]}
+                />
+              </View>
+
+              <Text style={styles.viewLabel}>
+                View expenses {'›'}
               </Text>
-            </View>
-            <Text style={styles.amount}>{formatMoney(category.total)}</Text>
-          </Pressable>
-        ))}
+            </Pressable>
+          );
+        })}
       </View>
     </ScrollView>
   );
@@ -98,71 +240,165 @@ export function CategoriesScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    gap: 16,
+    gap: 18,
     padding: 20,
-    paddingBottom: 32,
+    paddingBottom: 36,
   },
-  totalCard: {
+  summaryCard: {
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    gap: 4,
-    padding: 16,
+    padding: 18,
+    gap: 6,
   },
-  totalLabel: {
+  summaryLabel: {
     color: colors.muted,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   totalAmount: {
     color: colors.ink,
-    fontSize: 26,
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  summaryDivider: {
+    backgroundColor: colors.line,
+    height: 1,
+    marginVertical: 10,
+  },
+  summaryStats: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  stat: {
+    flex: 1,
+    gap: 3,
+  },
+  statValue: {
+    color: colors.ink,
+    fontSize: 19,
     fontWeight: '700',
   },
-  error: {
-    color: colors.danger,
-    fontSize: 14,
+  statLabel: {
+    color: colors.muted,
+    fontSize: 12,
+  },
+  statSeparator: {
+    backgroundColor: colors.line,
+    height: 34,
+    width: 1,
+    marginHorizontal: 14,
+  },
+  sectionHeader: {
+    marginTop: 2,
+  },
+  sectionTitle: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  sectionSubtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 4,
   },
   list: {
-    gap: 10,
+    gap: 12,
   },
-  card: {
-    alignItems: 'center',
+  categoryCard: {
     backgroundColor: colors.surface,
     borderColor: colors.line,
     borderRadius: 16,
     borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    overflow: 'hidden',
-    paddingRight: 14,
+    gap: 14,
+    padding: 16,
   },
   pressed: {
-    opacity: 0.82,
+    opacity: 0.75,
   },
-  stripe: {
-    height: '100%',
-    minHeight: 72,
-    width: 8,
+  categoryHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  body: {
+  categoryInfo: {
+    alignItems: 'center',
     flex: 1,
-    gap: 3,
-    paddingVertical: 14,
+    flexDirection: 'row',
+    gap: 10,
   },
-  name: {
+  colorDot: {
+    borderRadius: 6,
+    height: 12,
+    width: 12,
+  },
+  categoryText: {
+    flex: 1,
+    gap: 4,
+  },
+  categoryName: {
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
-  meta: {
+  categoryMeta: {
     color: colors.muted,
-    fontSize: 13,
+    fontSize: 12,
   },
-  amount: {
+  amountContainer: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  categoryAmount: {
     color: colors.ink,
     fontSize: 14,
     fontWeight: '700',
+  },
+  percentage: {
+    color: colors.muted,
+    fontSize: 11,
+  },
+  progressBackground: {
+    backgroundColor: colors.line,
+    borderRadius: 10,
+    height: 7,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    borderRadius: 10,
+    height: '100%',
+  },
+  viewLabel: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    gap: 10,
+    padding: 24,
+  },
+  loadingText: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  errorCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.danger,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 5,
+    padding: 14,
+  },
+  errorTitle: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  error: {
+    color: colors.danger,
+    fontSize: 12,
   },
 });

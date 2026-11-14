@@ -6,14 +6,14 @@ import { daysAgoISO } from '../utils/dates';
 const DATABASE_VERSION = 1;
 
 const CATEGORIES = [
-  { id: 1, name: 'Meals', color: '#C46B3A' },
-  { id: 2, name: 'Transport', color: '#2F6F8F' },
-  { id: 3, name: 'Study', color: '#3E5C46' },
-  { id: 4, name: 'Housing', color: '#6E4C7D' },
-  { id: 5, name: 'Personal', color: '#A15C6A' },
-  { id: 6, name: 'Connectivity', color: '#3D6B5A' },
-  { id: 7, name: 'Health', color: '#8A4B3A' },
-  { id: 8, name: 'Activities', color: '#4F6B4A' },
+  { id: 1, name: 'Meals', color: '#F39C12' },        // Orange
+  { id: 2, name: 'Transport', color: '#3498DB' },    // Blue
+  { id: 3, name: 'Study', color: '#27AE60' },        // Green
+  { id: 4, name: 'Housing', color: '#E74C3C' },      // Red
+  { id: 5, name: 'Personal', color: '#16A085' },     // Teal
+  { id: 6, name: 'Connectivity', color: '#9B59B6' }, // Purple
+  { id: 7, name: 'Health', color: '#7F8C8D' },       // Grey
+  { id: 8, name: 'Activities', color: '#E84393' },   // Pink
 ] as const;
 
 type SeedExpense = ExpenseInput & { daysAgo: number };
@@ -48,6 +48,16 @@ export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
   const versionRow = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const currentVersion = versionRow?.user_version ?? 0;
   if (currentVersion >= DATABASE_VERSION) {
+    await db.withTransactionAsync(async () => {
+        for (const category of CATEGORIES) {
+        await db.runAsync(
+            'UPDATE categories SET color = ? WHERE id = ?',
+            category.color,
+            category.id,
+        );
+        }
+    });
+
     return;
   }
 

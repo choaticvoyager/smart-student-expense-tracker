@@ -1,9 +1,18 @@
+import React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import type { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import type {
+  CompositeNavigationProp,
+  RouteProp,
+} from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSQLiteContext } from 'expo-sqlite';
+
 import {
   ActivityIndicator,
   FlatList,
@@ -20,9 +29,17 @@ import { EmptyState } from '../components/EmptyState';
 import { ExpenseRow } from '../components/ExpenseRow';
 import { listCategories } from '../db/categories';
 import { listExpenses } from '../db/expenses';
-import type { MainTabParamList, RootStackParamList } from '../navigation/types';
+import type {
+  MainTabParamList,
+  RootStackParamList,
+} from '../navigation/types';
 import { colors } from '../theme/colors';
-import { PAYMENT_METHODS, type Category, type Expense, type PaymentMethod } from '../types/models';
+import {
+  PAYMENT_METHODS,
+  type Category,
+  type Expense,
+  type PaymentMethod,
+} from '../types/models';
 import { periodRange, type Period } from '../utils/dates';
 
 type ExpensesNavigation = CompositeNavigationProp<
@@ -40,11 +57,13 @@ export function ExpensesScreen() {
   const db = useSQLiteContext();
   const navigation = useNavigation<ExpensesNavigation>();
   const route = useRoute<RouteProp<MainTabParamList, 'Expenses'>>();
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [query, setQuery] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod | null>(null);
   const [period, setPeriod] = useState<Period>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,6 +77,7 @@ export function ExpensesScreen() {
 
   useEffect(() => {
     let active = true;
+
     listCategories(db)
       .then((rows) => {
         if (active) {
@@ -66,9 +86,14 @@ export function ExpensesScreen() {
       })
       .catch((loadError: unknown) => {
         if (active) {
-          setError(loadError instanceof Error ? loadError.message : 'Could not load categories.');
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'Could not load categories.',
+          );
         }
       });
+
     return () => {
       active = false;
     };
@@ -78,7 +103,9 @@ export function ExpensesScreen() {
     useCallback(() => {
       let active = true;
       const range = periodRange(period);
+
       setLoading(true);
+
       listExpenses(db, {
         query,
         categoryId,
@@ -94,7 +121,11 @@ export function ExpensesScreen() {
         })
         .catch((loadError: unknown) => {
           if (active) {
-            setError(loadError instanceof Error ? loadError.message : 'Could not load expenses.');
+            setError(
+              loadError instanceof Error
+                ? loadError.message
+                : 'Could not load expenses.',
+            );
           }
         })
         .finally(() => {
@@ -102,17 +133,36 @@ export function ExpensesScreen() {
             setLoading(false);
           }
         });
+
       return () => {
         active = false;
       };
     }, [db, query, categoryId, paymentMethod, period]),
   );
 
-  const selectedCategory = categories.find((category) => category.id === categoryId);
+  const selectedCategory = categories.find(
+    (category) => category.id === categoryId,
+  );
+
+  const hasActiveFilters =
+    query.trim().length > 0 ||
+    categoryId !== null ||
+    paymentMethod !== null ||
+    period !== 'all';
+
+  const clearFilters = () => {
+    setQuery('');
+    setCategoryId(null);
+    setPaymentMethod(null);
+    setPeriod('all');
+  };
 
   return (
     <View style={styles.screen}>
       <View style={styles.filters}>
+        <Text style={styles.sectionHeading}>Find your expenses</Text>
+
+        {/* Search */}
         <TextInput
           accessibilityLabel="Search expenses"
           autoCapitalize="none"
@@ -120,61 +170,122 @@ export function ExpensesScreen() {
           onChangeText={setQuery}
           placeholder="Search title, note, or category"
           placeholderTextColor={colors.muted}
+          returnKeyType="search"
           style={styles.search}
           value={query}
         />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {PERIODS.map((item) => (
-            <Chip
-              key={item.id}
-              label={item.label}
-              selected={period === item.id}
-              onPress={() => setPeriod(item.id)}
-            />
-          ))}
-        </ScrollView>
+        {/* Period filters */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Time period</Text>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          <Chip label="All categories" selected={categoryId === null} onPress={() => setCategoryId(null)} />
-          {categories.map((category) => (
-            <Chip
-              key={category.id}
-              label={category.name}
-              color={category.color}
-              selected={categoryId === category.id}
-              onPress={() => setCategoryId(category.id)}
-            />
-          ))}
-        </ScrollView>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+          >
+            {PERIODS.map((item) => (
+              <Chip
+                key={item.id}
+                label={item.label}
+                selected={period === item.id}
+                onPress={() => setPeriod(item.id)}
+              />
+            ))}
+          </ScrollView>
+        </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          <Chip label="All payments" selected={paymentMethod === null} onPress={() => setPaymentMethod(null)} />
-          {PAYMENT_METHODS.map((method) => (
-            <Chip
-              key={method}
-              label={method}
-              selected={paymentMethod === method}
-              onPress={() => setPaymentMethod(method)}
-            />
-          ))}
-        </ScrollView>
+        {/* Category filters */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Category</Text>
 
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+          >
+            <Chip
+              label="All categories"
+              selected={categoryId === null}
+              onPress={() => setCategoryId(null)}
+            />
+
+            {categories.map((category) => (
+              <Chip
+                key={category.id}
+                label={category.name}
+                color={category.color}
+                selected={categoryId === category.id}
+                onPress={() => setCategoryId(category.id)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Payment filters */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Payment method</Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+          >
+            <Chip
+              label="All payments"
+              selected={paymentMethod === null}
+              onPress={() => setPaymentMethod(null)}
+            />
+
+            {PAYMENT_METHODS.map((method) => (
+              <Chip
+                key={method}
+                label={method}
+                selected={paymentMethod === method}
+                onPress={() => setPaymentMethod(method)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Results and actions */}
         <View style={styles.resultRow}>
           <Text style={styles.resultText}>
-            {loading ? 'Loading expenses' : `${expenses.length} ${expenses.length === 1 ? 'expense' : 'expenses'}`}
+            {loading
+              ? 'Loading expenses...'
+              : `${expenses.length} ${
+                  expenses.length === 1 ? 'expense' : 'expenses'
+                }`}
             {selectedCategory ? ` in ${selectedCategory.name}` : ''}
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('ExpenseForm')}
-          >
-            <Text style={styles.add}>Add</Text>
-          </Pressable>
+
+          <View style={styles.actions}>
+            {hasActiveFilters ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear all filters"
+                onPress={clearFilters}
+                hitSlop={8}
+              >
+                <Text style={styles.clear}>Clear</Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add expense"
+              onPress={() => navigation.navigate('ExpenseForm')}
+              hitSlop={8}
+            >
+              <Text style={styles.add}>+ Add</Text>
+            </Pressable>
+          </View>
         </View>
+
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 
+      {/* Expense list */}
       {loading && expenses.length === 0 ? (
         <ActivityIndicator color={colors.brand} style={styles.loader} />
       ) : (
@@ -182,6 +293,7 @@ export function ExpensesScreen() {
           contentContainerStyle={styles.list}
           data={expenses}
           keyExtractor={(item) => String(item.id)}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
               title="No matching expenses"
@@ -191,7 +303,11 @@ export function ExpensesScreen() {
           renderItem={({ item }) => (
             <ExpenseRow
               expense={item}
-              onPress={() => navigation.navigate('ExpenseDetail', { expenseId: item.id })}
+              onPress={() =>
+                navigation.navigate('ExpenseDetail', {
+                  expenseId: item.id,
+                })
+              }
             />
           )}
         />
@@ -203,11 +319,17 @@ export function ExpensesScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   filters: {
-    gap: 10,
+    gap: 14,
     paddingHorizontal: 20,
     paddingTop: 16,
+  },
+  sectionHeading: {
+    color: colors.ink,
+    fontSize: 20,
+    fontWeight: '800',
   },
   search: {
     backgroundColor: colors.surface,
@@ -215,9 +337,17 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     color: colors.ink,
-    fontSize: 16,
-    minHeight: 48,
+    fontSize: 15,
+    minHeight: 50,
     paddingHorizontal: 14,
+  },
+  filterSection: {
+    gap: 8,
+  },
+  filterLabel: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: '700',
   },
   chips: {
     gap: 8,
@@ -227,7 +357,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: 4,
+    paddingVertical: 4,
+    gap: 10,
   },
   resultText: {
     color: colors.muted,
@@ -235,10 +366,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  clear: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   add: {
     color: colors.brand,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   error: {
     color: colors.danger,
@@ -250,6 +391,7 @@ const styles = StyleSheet.create({
   list: {
     gap: 10,
     padding: 20,
-    paddingTop: 12,
+    paddingTop: 14,
+    paddingBottom: 32,
   },
 });
